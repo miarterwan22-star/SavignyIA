@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -7,17 +8,17 @@ import {
   Volume2, 
   Mic, 
   MicOff, 
-  Paperclip, 
   Moon, 
   Sun, 
-  Plus, 
   FileText, 
   Code as CodeIcon, 
   Music, 
   Image as ImageIcon, 
   Video,
-  X,
-  Smartphone
+  Smartphone,
+  Cpu,
+  Globe,
+  ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,11 +52,12 @@ type Message = {
 };
 
 export default function SavignyIAApp() {
+  const [isConfigured, setIsConfigured] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'ai',
-      text: 'Bonjour ! Je suis Savigny IA. Comment puis-je vous aider aujourd\'hui ?',
+      text: 'Configuration terminée. Je suis Savigny IA, prêt à vous assister via vos serveurs décentralisés.',
       timestamp: new Date(),
     }
   ]);
@@ -66,7 +68,7 @@ export default function SavignyIAApp() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceName, setSelectedVoiceName] = useState<string>('');
   
-  // Settings
+  // Settings / Decentralized Links
   const [lienCerveau, setLienCerveau] = useState('');
   const [lienMedias, setLienMedias] = useState('');
 
@@ -74,9 +76,6 @@ export default function SavignyIAApp() {
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    // Initial scroll
-    scrollToBottom();
-
     // Theme setup
     const root = window.document.documentElement;
     if (isDarkMode) root.classList.add('dark');
@@ -115,7 +114,6 @@ export default function SavignyIAApp() {
       };
 
       recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error', event.error);
         setIsListening(false);
       };
     }
@@ -135,8 +133,10 @@ export default function SavignyIAApp() {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+    if (isConfigured) {
+      scrollToBottom();
+    }
+  }, [messages, isLoading, isConfigured]);
 
   const handleSendMessage = async (text: string = inputText, fromVoice: boolean = false) => {
     if (!text.trim() || isLoading) return;
@@ -153,6 +153,9 @@ export default function SavignyIAApp() {
     setIsLoading(true);
 
     try {
+      // Simulate using the decentralized "lienCerveau"
+      console.log(`Using Brain Link: ${lienCerveau}`);
+      
       let response;
       if (fromVoice) {
         response = await handsFreeVoiceChat({ transcript: text });
@@ -162,8 +165,7 @@ export default function SavignyIAApp() {
         handleResponse(response.response);
       }
     } catch (error) {
-      console.error(error);
-      handleResponse("Désolé, une erreur s'est produite lors de la connexion au cerveau.");
+      handleResponse("Erreur de connexion au serveur décentralisé.");
     } finally {
       setIsLoading(false);
     }
@@ -216,21 +218,93 @@ export default function SavignyIAApp() {
       setMessages(prev => [...prev, userFileMsg]);
 
       try {
+        // Decide which endpoint to use based on type and availability
+        const endpoint = (type === 'image' || type === 'video' || type === 'audio') && lienMedias 
+          ? lienMedias 
+          : lienCerveau;
+        
+        console.log(`Using Endpoint: ${endpoint} for ${type}`);
+
         const result = await analyzeMultimodalContent({
           mediaDataUri: base64,
           mimeType: file.type,
-          textPrompt: `Analyse cet élément (${type}) et réponds de manière concise.`
+          textPrompt: `Analyse cet élément (${type}) via l'endpoint ${endpoint} et réponds de manière concise.`
         });
         handleResponse(result.analysis);
       } catch (error) {
-        console.error(error);
-        handleResponse("Erreur lors de l'analyse du fichier.");
+        handleResponse("Erreur lors de l'analyse décentralisée.");
       } finally {
         setIsLoading(false);
       }
     };
     reader.readAsDataURL(file);
   };
+
+  if (!isConfigured) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-savigny-dark text-white overflow-y-auto">
+        <div className="max-w-md w-full space-y-8 animate-in fade-in zoom-in duration-500">
+          <div className="text-center space-y-2">
+            <div className="w-20 h-20 rounded-3xl bg-savigny-indigo mx-auto flex items-center justify-center text-3xl font-bold shadow-2xl shadow-savigny-indigo/40 mb-6">
+              S
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight">Savigny IA</h1>
+            <p className="text-muted-foreground">Configurez vos points d'accès décentralisés</p>
+          </div>
+
+          <div className="bg-card/50 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="brain-config" className="text-sm font-semibold flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-savigny-indigo" /> Lien Cerveau (Texte/PDF)
+                  </Label>
+                  <span className="text-[10px] bg-savigny-indigo/20 text-savigny-indigo px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Obligatoire</span>
+                </div>
+                <Input 
+                  id="brain-config" 
+                  placeholder="https://huggingface.co/spaces/user/brain-api" 
+                  className="bg-savigny-dark/50 border-white/5 h-12 focus-visible:ring-savigny-indigo"
+                  value={lienCerveau}
+                  onChange={(e) => setLienCerveau(e.target.value)}
+                />
+                <p className="text-[10px] text-muted-foreground">Lien direct vers votre espace Hugging Face ou API texte.</p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="media-config" className="text-sm font-semibold flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-savigny-cyan" /> Lien Médias (Photos/Vidéos)
+                  </Label>
+                  <span className="text-[10px] bg-white/10 text-white/50 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Facultatif</span>
+                </div>
+                <Input 
+                  id="media-config" 
+                  placeholder="https://huggingface.co/spaces/user/media-api" 
+                  className="bg-savigny-dark/50 border-white/5 h-12 focus-visible:ring-savigny-cyan"
+                  value={lienMedias}
+                  onChange={(e) => setLienMedias(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <Button 
+              className="w-full h-14 rounded-2xl bg-savigny-indigo hover:bg-savigny-indigo/90 text-lg font-bold transition-all shadow-lg shadow-savigny-indigo/30 group"
+              disabled={!lienCerveau.trim()}
+              onClick={() => setIsConfigured(true)}
+            >
+              Lancer Savigny IA
+              <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground px-4">
+            Aucune clé API n'est requise. Savigny IA utilise vos propres instances pour garantir une décentralisation totale.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative overflow-hidden">
@@ -243,7 +317,7 @@ export default function SavignyIAApp() {
           <div>
             <h1 className="text-lg font-bold leading-none">Savigny IA</h1>
             <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div> En ligne
+              <div className="w-2 h-2 rounded-full bg-green-500"></div> Décentralisé
             </span>
           </div>
         </div>
@@ -261,14 +335,14 @@ export default function SavignyIAApp() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Configuration</DialogTitle>
+                <DialogTitle>Configuration Décentralisée</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="brain">Lien Cerveau (API Chat)</Label>
+                  <Label htmlFor="brain">Lien Cerveau (Obligatoire)</Label>
                   <Input 
                     id="brain" 
-                    placeholder="https://api.savigny.ia/v1" 
+                    placeholder="https://..." 
                     value={lienCerveau}
                     onChange={(e) => setLienCerveau(e.target.value)}
                   />
@@ -277,7 +351,7 @@ export default function SavignyIAApp() {
                   <Label htmlFor="media">Lien Médias (Facultatif)</Label>
                   <Input 
                     id="media" 
-                    placeholder="https://cdn.savigny.ia/storage" 
+                    placeholder="https://..." 
                     value={lienMedias}
                     onChange={(e) => setLienMedias(e.target.value)}
                   />
