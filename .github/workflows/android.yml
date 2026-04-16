@@ -21,6 +21,20 @@ jobs:
           java-version: '17'
 
       - name: Setup Node.js 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Capacitor Sync
+        run: npx cap sync android
+
+      - name: Generate Gradle Wrapper
+        run: cd android && ./gradlew wrapper
         uses: actions/setup-node@v4
         with:
           node-version: '20'
