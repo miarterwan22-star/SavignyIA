@@ -1,46 +1,37 @@
-'use server';
 /**
- * @fileOverview An AI chat agent for text-based conversations with Savigny IA.
- *
- * - aiTextChat - A function that handles text chat interactions.
- * - AITextChatInput - The input type for the aiTextChat function.
- * - AITextChatOutput - The return type for the aiTextChat function.
+ * @fileOverview Agent de chat texte pour Savigny IA (Côté Client).
+ * Communique avec l'endpoint décentralisé configuré par l'utilisateur.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+export type AITextChatInput = {
+  message: string;
+  endpoint: string;
+};
 
-const AITextChatInputSchema = z.object({
-  message: z.string().describe('The user\'s text message to the AI.'),
-});
-export type AITextChatInput = z.infer<typeof AITextChatInputSchema>;
-
-const AITextChatOutputSchema = z.object({
-  response: z.string().describe('The AI\'s conversational text response.'),
-});
-export type AITextChatOutput = z.infer<typeof AITextChatOutputSchema>;
+export type AITextChatOutput = {
+  response: string;
+};
 
 export async function aiTextChat(input: AITextChatInput): Promise<AITextChatOutput> {
-  return aiTextChatFlow(input);
-}
+  try {
+    const response = await fetch(input.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        inputs: input.message,
+        parameters: { max_new_tokens: 500 }
+      }),
+    });
 
-const aiTextChatPrompt = ai.definePrompt({
-  name: 'aiTextChatPrompt',
-  input: {schema: AITextChatInputSchema},
-  output: {schema: AITextChatOutputSchema},
-  prompt: `You are Savigny IA, a helpful and conversational AI assistant. Respond to the user's message in a friendly and engaging manner, similar to a WhatsApp chat.
+    if (!response.ok) throw new Error('Erreur serveur décentralisé');
 
-User message: {{{message}}}`,
-});
-
-const aiTextChatFlow = ai.defineFlow(
-  {
-    name: 'aiTextChatFlow',
-    inputSchema: AITextChatInputSchema,
-    outputSchema: AITextChatOutputSchema,
-  },
-  async input => {
-    const {output} = await aiTextChatPrompt(input);
-    return output!;
+    const data = await response.json();
+    // Support de différents formats de réponse (Hugging Face Inference API ou custom)
+    const text = Array.isArray(data) ? data[0]?.generated_text : (data.generated_text || data.response || data.text);
+    
+    return { response: text || "Je n'ai pas pu générer de réponse." };
+  } catch (error) {
+    console.error("Chat Error:", error);
+    return { response: "Désolé, une erreur est survenue lors de la communication avec votre instance décentralisée." };
   }
-);
+}

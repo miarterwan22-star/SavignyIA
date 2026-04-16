@@ -1,59 +1,34 @@
-'use server';
 /**
- * @fileOverview A Genkit flow for hands-free voice chat interaction with the AI.
- *
- * - handsFreeVoiceChat - A function that handles the hands-free voice chat process, sending transcribed text to the AI and returning its response.
- * - HandsFreeVoiceChatInput - The input type for the handsFreeVoiceChat function.
- * - HandsFreeVoiceChatOutput - The return type for the handsFreeVoiceChat function.
+ * @fileOverview Agent vocal pour Savigny IA (Côté Client).
+ * Transforme le texte transcrit en réponse via l'endpoint décentralisé.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+export type HandsFreeVoiceChatInput = {
+  transcript: string;
+  endpoint: string;
+};
 
-const HandsFreeVoiceChatInputSchema = z.object({
-  transcript: z
-    .string()
-    .describe(
-      'The transcribed text from the user\'s voice input, to be sent to the AI.'
-    ),
-});
-export type HandsFreeVoiceChatInput = z.infer<
-  typeof HandsFreeVoiceChatInputSchema
->;
+export type HandsFreeVoiceChatOutput = {
+  aiResponse: string;
+};
 
-const HandsFreeVoiceChatOutputSchema = z.object({
-  aiResponse: z.string().describe('The AI\'s textual response to the user\'s input.'),
-});
-export type HandsFreeVoiceChatOutput = z.infer<
-  typeof HandsFreeVoiceChatOutputSchema
->;
+export async function handsFreeVoiceChat(input: HandsFreeVoiceChatInput): Promise<HandsFreeVoiceChatOutput> {
+  try {
+    const response = await fetch(input.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        inputs: `Réponds brièvement à cette commande vocale : ${input.transcript}`,
+      }),
+    });
 
-export async function handsFreeVoiceChat(
-  input: HandsFreeVoiceChatInput
-): Promise<HandsFreeVoiceChatOutput> {
-  return handsFreeVoiceChatFlow(input);
-}
+    if (!response.ok) throw new Error('Erreur serveur vocal');
 
-const handsFreeVoiceChatPrompt = ai.definePrompt({
-  name: 'handsFreeVoiceChatPrompt',
-  input: {schema: HandsFreeVoiceChatInputSchema},
-  output: {schema: HandsFreeVoiceChatOutputSchema},
-  prompt: `The user has spoken the following message:
-
-User: {{{transcript}}}
-
-Respond to the user naturally and helpfully. Your response should be concise and directly address the user's input.
-`,
-});
-
-const handsFreeVoiceChatFlow = ai.defineFlow(
-  {
-    name: 'handsFreeVoiceChatFlow',
-    inputSchema: HandsFreeVoiceChatInputSchema,
-    outputSchema: HandsFreeVoiceChatOutputSchema,
-  },
-  async (input) => {
-    const {output} = await handsFreeVoiceChatPrompt(input);
-    return output!;
+    const data = await response.json();
+    const text = Array.isArray(data) ? data[0]?.generated_text : (data.generated_text || data.response || data.text);
+    
+    return { aiResponse: text || "Commande vocale reçue mais non traitée." };
+  } catch (error) {
+    return { aiResponse: "Erreur de connexion vocale." };
   }
-);
+}

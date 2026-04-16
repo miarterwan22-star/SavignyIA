@@ -1,78 +1,41 @@
-'use server';
 /**
- * @fileOverview This file defines a Genkit flow for analyzing multimodal content.
- * Users can upload various file types (PDF, code, image, video) along with a text prompt,
- * and the AI will analyze the content and provide insights.
- *
- * - analyzeMultimodalContent - A function that handles the multimodal content analysis process.
- * - MultimodalContentAnalysisInput - The input type for the analyzeMultimodalContent function.
- * - MultimodalContentAnalysisOutput - The return type for the analyzeMultimodalContent function.
+ * @fileOverview Analyse de contenu multimodal (Côté Client).
+ * Envoie des fichiers vers l'endpoint médias décentralisé.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+export type MultimodalContentAnalysisInput = {
+  mediaDataUri: string;
+  mimeType: string;
+  textPrompt?: string;
+  endpoint: string;
+};
 
-const MultimodalContentAnalysisInputSchema = z.object({
-  mediaDataUri: z
-    .string()
-    .describe(
-      "The content of the file as a data URI, including MIME type and Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-    ),
-  mimeType: z
-    .string()
-    .describe(
-      "The MIME type of the uploaded file (e.g., 'application/pdf', 'image/jpeg', 'video/mp4', 'text/plain')."
-    ),
-  textPrompt: z
-    .string()
-    .optional()
-    .describe(
-      "Additional text instructions or questions for the AI regarding the uploaded content."
-    ),
-});
-export type MultimodalContentAnalysisInput = z.infer<
-  typeof MultimodalContentAnalysisInputSchema
->;
+export type MultimodalContentAnalysisOutput = {
+  analysis: string;
+};
 
-const MultimodalContentAnalysisOutputSchema = z.object({
-  analysis: z.string().describe("The AI's analysis, insights, or response based on the uploaded content."),
-});
-export type MultimodalContentAnalysisOutput = z.infer<
-  typeof MultimodalContentAnalysisOutputSchema
->;
-
-export async function analyzeMultimodalContent(
-  input: MultimodalContentAnalysisInput
-): Promise<MultimodalContentAnalysisOutput> {
-  return multimodalContentAnalysisFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'multimodalContentAnalysisPrompt',
-  input: { schema: MultimodalContentAnalysisInputSchema },
-  output: { schema: MultimodalContentAnalysisOutputSchema },
-  prompt: `You are an expert AI assistant capable of analyzing various types of content including documents, code, images, and videos. Your task is to provide insightful analysis and respond to user queries based on the provided content.
-
-Here is the content for your analysis:
-{{media url=mediaDataUri}}
-
-Additional instructions or questions from the user: {{{textPrompt}}}
-
-Based on the content and instructions, provide a comprehensive analysis or response.`,
-});
-
-const multimodalContentAnalysisFlow = ai.defineFlow(
-  {
-    name: 'multimodalContentAnalysisFlow',
-    inputSchema: MultimodalContentAnalysisInputSchema,
-    outputSchema: MultimodalContentAnalysisOutputSchema,
-  },
-  async (input) => {
-    const { output } = await prompt({
-      mediaDataUri: input.mediaDataUri,
-      mimeType: input.mimeType,
-      textPrompt: input.textPrompt,
+export async function analyzeMultimodalContent(input: MultimodalContentAnalysisInput): Promise<MultimodalContentAnalysisOutput> {
+  try {
+    // Note: L'implémentation exacte dépend du type d'instance Hugging Face utilisée.
+    // On envoie ici en format JSON standard.
+    const response = await fetch(input.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        inputs: {
+          image: input.mediaDataUri.split(',')[1], // On envoie le base64 pur
+          question: input.textPrompt || "Analyse ce contenu."
+        }
+      }),
     });
-    return output!;
+
+    if (!response.ok) throw new Error('Erreur analyse média');
+
+    const data = await response.json();
+    const result = data.analysis || data.generated_text || (Array.isArray(data) ? data[0]?.generated_text : "Analyse terminée.");
+
+    return { analysis: result };
+  } catch (error) {
+    return { analysis: "Échec de l'analyse du média sur votre instance." };
   }
-);
+}
