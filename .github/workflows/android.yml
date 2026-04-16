@@ -32,6 +32,14 @@ jobs:
       - name: Build Next.js (Static Export)
         run: npm run build
 
+      - name: Create placeholder google-services.json
+        run: echo "{}" > android/app/google-services.json
+
+      - name: Generate Gradle Wrapper
+        run: |
+          cd android
+          gradle wrapper --gradle-version 8.2
+
       - name: Capacitor Sync
         run: npx cap sync android
 
