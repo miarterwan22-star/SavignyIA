@@ -1,6 +1,11 @@
 include ':app'
-include ':capacitor-android'
-include ':capacitor-cordova-android-plugins'
 
 project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
-project(':capacitor-cordova-android-plugins').projectDir = new File('capacitor-cordova-android-plugins')
+include ':capacitor-android'
+
+// Note: capacitor.settings.gradle est normalement généré par 'npx cap sync'
+// On s'assure que si le fichier existe, il est inclus pour les plugins.
+def capacitorSettings = new File('capacitor.settings.gradle')
+if (capacitorSettings.exists()) {
+    apply from: 'capacitor.settings.gradle'
+}

@@ -11,6 +11,8 @@ android {
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
+             // Allows to keep empty directories in merged resources directory
+             // Which is needed for some native-bridge cases
              ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
@@ -20,10 +22,14 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
 }
 
 repositories {
-    flatDir {
+    flatDir{
         dirs 'libs'
     }
 }
@@ -32,11 +38,21 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    
+    // C'est ici que la dépendance vers Capacitor est cruciale
     implementation project(':capacitor-android')
-    implementation project(':capacitor-cordova-android-plugins')
-}
+    
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 
-apply from: 'capacitor.build.gradle'
+    // Inclusion automatique des plugins Capacitor
+    def capacitorPlugins = new File('capacitor-cordova-android-plugins/build.gradle')
+    if (capacitorPlugins.exists()) {
+        implementation project(':capacitor-cordova-android-plugins')
+    }
+}
 
 try {
     def servicesJSON = file('google-services.json')
@@ -44,5 +60,5 @@ try {
         apply plugin: 'com.google.gms.google-services'
     }
 } catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. This is normal if you are not using Firebase.")
+    logger.info("google-services.json not found, skipping Google Services plugin injection")
 }
