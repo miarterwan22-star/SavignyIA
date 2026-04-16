@@ -1,15 +1,11 @@
 name: Build Android APK
-
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: [ principal ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Source
         uses: actions/checkout@v4
@@ -20,30 +16,21 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 20
 
       - name: Install Dependencies
         run: npm install
 
-      - name: Build Next.js (Static Export)
+      - name: Build Next.js
         run: npm run build
-
-      - name: Create placeholder google-services.json
-        run: echo "{}" > android/app/google-services.json
-
-      - name: Generate Gradle Wrapper
-        run: |
-          cd android
-          gradle wrapper --gradle-version 8.2
 
       - name: Capacitor Sync
         run: npx cap sync android
 
-      - name: Build Android APK (Debug)
+      - name: Build Android APK
         run: |
           cd android
           chmod +x gradlew
@@ -52,5 +39,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: savigny-ia-debug-apk
+          name: savigny-ia-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
